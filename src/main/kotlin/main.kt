@@ -169,46 +169,44 @@ fun getVariablesTs(): String {
 
 fun getVariablesTsReplaceVariable(): String {
     return """
-        export function replaceVariable(typeName: NonPrimitiveType, id: number, values: object) {
-            switch (typeName) {
-                ${
+export function replaceVariable(typeName: NonPrimitiveType, id: number, values: object) {
+    switch (typeName) {
+${
         types.entrySet().joinToString(separator = "\n") { (typeName, typeDef) ->
-            """
-                    case '${typeName}': {
-                        return new ${typeName}Variable(id, {${
-                if (typeDef.asJsonObject.get("keys").asJsonObject.keySet().isEmpty()) {
-                    ""
-                } else {
+            """        case '${typeName}': {
+            return new ${typeName}Variable(id, {${
+                if (typeDef.asJsonObject.get("keys").asJsonObject.keySet().isEmpty()) ""
+                else {
                     "\n" + typeDef.asJsonObject.get("keys").asJsonObject.entrySet()
                         .joinToString(separator = ",\n") { (keyName, keyDef) ->
                             when (keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString) {
-                                TypeConstants.TEXT -> "                              $keyName:  String(values['${keyName}'])"
-                                TypeConstants.NUMBER, TypeConstants.DATE, TypeConstants.TIMESTAMP, TypeConstants.TIME -> "                              $keyName:  parseInt(String(values['${keyName}']))"
-                                TypeConstants.DECIMAL -> "                              $keyName:  parseFloat(String(values['${keyName}']))"
-                                TypeConstants.BOOLEAN -> "                              $keyName:  Boolean(String(values['${keyName}'])).valueOf()"
-                                in primitiveTypes -> "                              $keyName: this.values.${keyName}"
+                                TypeConstants.TEXT -> "                $keyName:  String(values['${keyName}'])"
+                                TypeConstants.NUMBER, TypeConstants.DATE, TypeConstants.TIMESTAMP, TypeConstants.TIME -> "                $keyName:  parseInt(String(values['${keyName}']))"
+                                TypeConstants.DECIMAL -> "                $keyName:  parseFloat(String(values['${keyName}']))"
+                                TypeConstants.BOOLEAN -> "                $keyName:  Boolean(String(values['${keyName}'])).valueOf()"
+                                in primitiveTypes -> "                $keyName: this.values.${keyName}"
                                 TypeConstants.FORMULA -> when (keyDef.asJsonObject.get(KeyConstants.FORMULA_RETURN_TYPE).asString) {
-                                    TypeConstants.NUMBER, TypeConstants.DATE, TypeConstants.TIMESTAMP, TypeConstants.TIME -> "                              $keyName:  parseInt(String(values['${keyName}']))"
-                                    TypeConstants.DECIMAL -> "                              $keyName:  parseFloat(String(values['${keyName}']))"
-                                    TypeConstants.BOOLEAN -> "                              $keyName:  Boolean(String(values['${keyName}'])).valueOf()"
-                                    else -> "                              $keyName:  String(values['${keyName}'])"
+                                    TypeConstants.NUMBER, TypeConstants.DATE, TypeConstants.TIMESTAMP, TypeConstants.TIME -> "                $keyName:  parseInt(String(values['${keyName}']))"
+                                    TypeConstants.DECIMAL -> "                $keyName:  parseFloat(String(values['${keyName}']))"
+                                    TypeConstants.BOOLEAN -> "                $keyName:  Boolean(String(values['${keyName}'])).valueOf()"
+                                    else -> "                $keyName:  String(values['${keyName}'])"
                                 }
-                                else -> "                              $keyName: new ${
+                                else -> "                $keyName: new ${
                                     keyDef.asJsonObject.get(
                                         KeyConstants.KEY_TYPE
                                     ).asString
                                 }(parseInt(String(values['${keyName}'])))"
                             }
-                        } + "\n                        "
+                        }
                 }
-            }})
-                    }
-                """.trimIndent()
+            }
+            })
+        }"""
         }
     }
-            }
-        }
-    """
+    }
+}
+"""
 }
 
 fun getTypesTs(): String {
@@ -308,7 +306,7 @@ fun getTypesTs(): String {
 
 fun getRowsTs(): String {
     return """
-        import { immerable, Immutable } from 'immer'
+        import { Immutable } from 'immer'
         import { HashSet } from 'prelude-ts'
         import { DiffVariable } from './layers'
         import { ${types.keySet().joinToString(separator = ", ") { "${it}, ${it}Variable" }}} from './variables'
@@ -470,9 +468,9 @@ import { when } from './utils';
 import { DiffVariable, getRemoveVariableDiff, getReplaceVariableDiff, getVariable, mergeDiffs } from './layers'
 import { Variable${
         if (types.keySet().isEmpty()) ""
-        else ", " + types.keySet().joinToString(separator = ", ") { "${it}, ${it}Variable" }
+        else ", " + types.keySet().joinToString(separator = ", ") { "${if (types.entrySet().flatMap { (_, typeDef) -> typeDef.asJsonObject.get("keys").asJsonObject.entrySet().map { (_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString } }.contains(it)) "${it}, " else ""}${it}Variable" }
     } } from './variables'
-        
+
 class Counter {
     private id: number = -1
 
@@ -1331,20 +1329,35 @@ ${
 }
 
 fun getShowTs(typeName: String, typeDef: JsonObject): String {
-    return """import React, { useEffect, useState } from 'react'
+    return """import React, { useEffect${
+        if(typeDef.get("lists").asJsonObject.keySet().isEmpty()) ""
+        else ", useState"
+    } } from 'react'
 import { Immutable, Draft } from 'immer'
 import { useImmerReducer } from 'use-immer'
 import tw from 'twin.macro'
-import { HashSet, Vector } from 'prelude-ts'
-import { Drawer } from '@material-ui/core'
+import { HashSet${
+        if(typeDef.get("lists").asJsonObject.keySet().isEmpty()) ""
+        else ", Vector"
+    } } from 'prelude-ts'${
+        if(typeDef.get("lists").asJsonObject.keySet().isEmpty()) ""
+        else "\nimport { Drawer } from '@material-ui/core'"
+    }
 import { executeCircuit } from '../../../main/circuit'
 import { types } from '../../../main/types'
-import { Container, Item, none } from '../../../main/commons'
-import { Table } from '../../../main/Table'
-import { Query, Filter, Args, getQuery, updateQuery, applyFilter } from '../../../main/Filter'
-import * as Grid from './grids/Show'
-import * as Grid2 from './grids/List'
-import { withRouter, Link } from 'react-router-dom'
+import { Container, Item, none } from '../../../main/commons'${
+        if(typeDef.get("lists").asJsonObject.keySet().isEmpty()) ""
+        else "\n" + """import { Table } from '../../../main/Table'
+import { Query, Filter, Args, getQuery, updateQuery, applyFilter } from '../../../main/Filter'"""
+    }
+import * as Grid from './grids/Show'${
+        if(typeDef.get("lists").asJsonObject.keySet().isEmpty()) ""
+        else "\nimport * as Grid2 from './grids/List'"
+    }
+import { withRouter${ if(typeDef.get("keys").asJsonObject.entrySet().map {(_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString}.toSet().none { !primitiveTypes.contains(it) } &&
+        (typeDef.asJsonObject.get("lists").asJsonObject.keySet().flatMap {
+            types.get(it).asJsonObject.get("keys").asJsonObject.entrySet().map { (_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString } }.toTypedArray().none { !primitiveTypes.contains(it) })) ""
+    else ", Link" } } from 'react-router-dom'
 import { circuits } from '../../../main/circuits'
 import { iff, when } from '../../../main/utils'
 import { db } from '../../../main/dexie'
@@ -1377,7 +1390,10 @@ import { ${
                 }.toTypedArray())
             )
                 .filter { !primitiveTypes.contains(it) && it != TypeConstants.FORMULA }
-                .sorted().joinToString(separator = ", ") { "${it}, ${it}Variable" }
+                .sorted().joinToString(separator = ", ") { "${if(it == typeName && typeDef.get("lists").asJsonObject.keySet().isEmpty() || (typeDef.get("lists").asJsonObject.keySet().contains(it) && !typeDef.get("keys").asJsonObject.entrySet().map {(_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString}.toSet().contains(it) && !(typeDef.asJsonObject.get("lists").asJsonObject.keySet().flatMap { it1 ->
+                        types.get(it1).asJsonObject.get("keys").asJsonObject.entrySet()
+                            .map { (_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString }
+                    }.toTypedArray()).contains(it))) "" else "${it}, "}${it}Variable" }
         } } from '../../../main/variables'
 
 type State = Immutable<{
@@ -1727,7 +1743,7 @@ function Component(props) {
 
     const [state, dispatch] = useImmerReducer<State, Action>(reducer, initialState)
 
-    const ${typeName.subSequence(0, 1).toString().toLowerCase() + typeName.substring(1) + "Type"} = types['${typeName}']${
+    ${if(typeDef.get("keys").asJsonObject.keySet().isEmpty()) "" else "const ${typeName.subSequence(0, 1).toString().toLowerCase() + typeName.substring(1) + "Type"} = types['${typeName}']"}${
         if(typeDef.asJsonObject.get("lists").asJsonObject.keySet().isEmpty()) ""
         else "\n" + typeDef.asJsonObject.get("lists").asJsonObject.keySet().filter { it != typeName }
             .joinToString(separator = "\n") { refTypeName ->
@@ -2305,9 +2321,15 @@ const Label = tw.label`w-1/2 whitespace-nowrap`
 
 // const InlineLabel = tw.label`inline-block w-1/2`
 
-const Select = tw.select`p-1.5 text-gray-500 leading-tight border border-gray-400 shadow-inner hover:border-gray-600 w-full rounded-sm`
+${ if(typeDef.get("keys").asJsonObject.entrySet().map {(_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString}.toSet().none { !primitiveTypes.contains(it) } &&
+        (typeDef.asJsonObject.get("lists").asJsonObject.keySet().flatMap {
+            types.get(it).asJsonObject.get("keys").asJsonObject.entrySet().map { (_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString } }.toTypedArray().none { !primitiveTypes.contains(it) })) ""
+    else "const Select = tw.select`p-1.5 text-gray-500 leading-tight border border-gray-400 shadow-inner hover:border-gray-600 w-full rounded-sm`" }
 
-const Input = tw.input`p-1.5 text-gray-500 leading-tight border border-gray-400 shadow-inner hover:border-gray-600 w-full rounded-sm`
+${ if(typeDef.get("keys").asJsonObject.entrySet().map {(_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString}.toSet().none { primitiveTypes.contains(it) } &&
+        (typeDef.asJsonObject.get("lists").asJsonObject.keySet().flatMap {
+            types.get(it).asJsonObject.get("keys").asJsonObject.entrySet().map { (_, keyDef) -> keyDef.asJsonObject.get(KeyConstants.KEY_TYPE).asString } }.toTypedArray().none { primitiveTypes.contains(it) })) "" 
+    else "const Input = tw.input`p-1.5 text-gray-500 leading-tight border border-gray-400 shadow-inner hover:border-gray-600 w-full rounded-sm`" }
 
 const Button = tw.button`bg-gray-900 text-white text-center font-bold p-2 mx-1 uppercase w-40 h-full max-w-sm rounded-lg focus:outline-none inline-block`
 """
@@ -2577,7 +2599,7 @@ ${
             }'><Show${typeName} /></Route>"""
         }
     }
-              <Route path='/'><Redirect to='/regions' /></Route>
+              <Route path='/'><Redirect to='/region-list' /></Route>
             </Switch>
           </Item>
         </Container>
@@ -2591,8 +2613,97 @@ export default App
 """
 }
 
+fun getNavbarTs(): String {
+    return """import { NavLink } from 'react-router-dom'
+import createDemoData from './createDemoData'
+
+const navbar: { [index: string]: { [index: string]: string } } = {
+${
+        types.entrySet().map { (_, typeDef) -> typeDef.asJsonObject.get("group").asString }.toSet()
+            .joinToString(separator = ",\n") { groupName ->
+                """    '${groupName}': {
+${
+                    types.entrySet().filter { (_, typeDef) -> typeDef.asJsonObject.get("group").asString == groupName }
+                        .joinToString(separator = ",\n") { (typeName, _) ->
+                            "        '${typeName.split("(?=\\p{Upper})".toRegex()).joinToString(separator = " ").trim()}': '/${
+                                "${
+                                    typeName.subSequence(0, 1).toString().toLowerCase()
+                                }${typeName.substring(1)}".split("(?=\\p{Upper})".toRegex())
+                                    .joinToString(separator = "-") {
+                                        "${
+                                            it.subSequence(0, 1).toString().toLowerCase()
+                                        }${it.substring(1)}"
+                                    }
+                            }-list'"
+                        }
+                }
+    }"""
+            }
+    }
+}
+
+const icons = {
+    'Geography': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>,
+    'IT': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+    </svg>,
+    'Banking': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>,
+    'Accounts': '',
+    'Production': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+    </svg>,
+    'Purchase': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>,
+    'Store': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+    </svg>,
+    'Quality': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+    </svg>,
+    'Warehouse': <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mx-l-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+    </svg>
+}
+
+export default function Navbar() {
+    return (<>
+        <div className="font-extrabold p-4 text-2xl">
+            Pibity ERP
+        </div>
+        <ul className="px-2">
+            {
+                Object.keys(navbar).map(module => {
+                    return (<li key={module} className="py-2 mb-1 border-gray-800 border-t-2">
+                        <div className="m-2 font-bold text-lg text-gray-50">
+                            {icons[module] || ''} {module}
+                        </div>
+                        <ul className="px-7">
+                            {
+                                Object.keys(navbar[module]).map(key => {
+                                    return (<li key={key} className="whitespace-nowrap">
+                                        <NavLink activeClassName="font-extrabold text-lg text-white" to={navbar[module][key]}>{key}</NavLink>
+                                    </li>)
+                                })
+                            }
+                        </ul>
+                    </li>)
+                })
+            }
+        </ul>
+        <button className='bg-gray-800 font-bold text-lg w-full' onClick={createDemoData}>RESET DATA</button>
+    </>)
+}
+"""
+}
+
 fun main() {
     createDirectories(Path.of("pibity-erp/src/main"))
+    File("pibity-erp/src/main/Navbar.tsx").writeText(getNavbarTs())
     File("pibity-erp/src/main/App.tsx").writeText(getAppTs())
     File("pibity-erp/src/main/circuits.ts").writeText(getCircuitsTs())
     File("pibity-erp/src/main/mapper.ts").writeText(getMappersTs())

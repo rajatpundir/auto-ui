@@ -1001,7 +1001,7 @@
     "lists": {
       "CompanyProduct": "company",
       "MappingProductTag": "product",
-      "UOM": "product"
+      "Uom": "product"
     }
   },
   "CompanyProduct": {
@@ -1114,7 +1114,7 @@
     "assertions": {},
     "lists": {}
   },
-  "UOM": {
+  "Uom": {
     "name": "Unit of Measure",
     "group": "IT",
     "recursive": false,
@@ -1182,8 +1182,8 @@
       },
       "uom": {
         "order": 3,
-        "name": "UOM",
-        "type": "UOM"
+        "name": "Uom",
+        "type": "Uom"
       },
       "ordered": {
         "order": 4,
@@ -1621,7 +1621,7 @@
     "assertions": {},
     "lists": {}
   },
-  "BOM": {
+  "Bom": {
     "name": "Bill of Material ID",
     "url": "bom",
     "group": "Production",
@@ -1641,10 +1641,10 @@
     },
     "assertions": {},
     "lists": {
-      "BOMItem": "bom"
+      "BomItem": "bom"
     }
   },
-  "BOMItem": {
+  "BomItem": {
     "name": "BOM Item",
     "group": "Production",
     "recursive": false,
@@ -1652,7 +1652,7 @@
       "bom": {
         "order": 0,
         "name": "BOM",
-        "type": "BOM"
+        "type": "Bom"
       },
       "product": {
         "order": 1,
@@ -1666,8 +1666,8 @@
       },
       "uom": {
         "order": 3,
-        "name": "UOM",
-        "type": "UOM"
+        "name": "Uom",
+        "type": "Uom"
       }
     },
     "entrypoint": [],
@@ -1688,7 +1688,7 @@
       "bom": {
         "order": 0,
         "name": "BOM",
-        "type": "BOM"
+        "type": "Bom"
       },
       "approved": {
         "order": 1,
